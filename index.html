@@ -228,7 +228,23 @@ async function loadLeaderboard() {
     $("leaderboardTable").style.display = "";
   } catch (e) {
     console.warn("leaderboard failed", e);
-    status.textContent = "Could not load claim events from the public RPC. Try refreshing.";
+    // Fallback: static snapshot of on-chain claim events (regenerated periodically).
+    // Some networks block eth_getLogs on public RPCs; the snapshot keeps the
+    // leaderboard visible instead of showing an error.
+    try {
+      const res = await fetch("leaderboard_snapshot.json", { cache: "no-store" });
+      if (!res.ok) throw new Error("snapshot fetch failed: " + res.status);
+      const snap = await res.json();
+      if (!snap.top || snap.top.length === 0) throw new Error("snapshot empty");
+      $("leaderboardBody").innerHTML = snap.top.map((r, i) =>
+        `<tr><td>${i + 1}</td><td class="mono">${shortAddr(r.address)}</td><td class="num">${r.claims}</td><td class="num">${r.totalKno.toLocaleString("en-US")}</td></tr>`).join("");
+      status.textContent = "Snapshot as of " + new Date(snap.generatedAt).toLocaleString() + " — live data unavailable from this network.";
+      status.style.display = "";
+      $("leaderboardTable").style.display = "";
+    } catch (e2) {
+      console.warn("leaderboard snapshot failed", e2);
+      status.textContent = "Could not load claim events from the public RPC. Try refreshing.";
+    }
   }
 }
 
