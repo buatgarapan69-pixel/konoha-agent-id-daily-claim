@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Konoha Agent ID Daily Claim</title>
+<style>
+  :root { --bg:#0d1117; --card:#161b22; --line:#30363d; --text:#e6edf3; --muted:#8b949e; --green:#3fb950; --green-dim:#1f6feb; --amber:#d29922; --red:#f85149; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; line-height:1.5; }
+  .wrap { max-width:860px; margin:0 auto; padding:24px 16px 64px; }
+  header { text-align:center; padding:24px 0 8px; }
+  header h1 { font-size:28px; letter-spacing:.5px; }
+  header h1 span { color:var(--green); }
+  header p { color:var(--muted); margin-top:6px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; margin-top:16px; }
+  .card h2 { font-size:18px; margin-bottom:12px; }
+  .row { display:flex; gap:12px; flex-wrap:wrap; }
+  .stat { flex:1 1 160px; background:#0d1117; border:1px solid var(--line); border-radius:10px; padding:14px; }
+  .stat .label { color:var(--muted); font-size:13px; }
+  .stat .value { font-size:22px; font-weight:700; margin-top:4px; }
+  .stat .sub { color:var(--muted); font-size:12px; margin-top:2px; }
+  button { background:var(--green); color:#fff; border:none; border-radius:8px; padding:12px 20px; font-size:16px; font-weight:600; cursor:pointer; }
+  button:disabled { background:#30363d; color:#8b949e; cursor:not-allowed; }
+  button.secondary { background:transparent; border:1px solid var(--line); color:var(--text); }
+  .big { width:100%; font-size:18px; padding:14px; }
+  .addr { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:14px; word-break:break-all; }
+  .ok { color:var(--green); } .warn { color:var(--amber); } .bad { color:var(--red); } .muted { color:var(--muted); }
+  .status-line { margin-top:10px; font-size:14px; }
+  table { width:100%; border-collapse:collapse; margin-top:8px; }
+  th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); font-size:14px; }
+  th { color:var(--muted); font-weight:600; }
+  td.num { text-align:right; font-variant-numeric:tabular-nums; }
+  th.num { text-align:right; }
+  .mono { font-family:ui-monospace,Menlo,Consolas,monospace; }
+  footer { text-align:center; color:var(--muted); font-size:13px; margin-top:32px; }
+  footer a { color:var(--green); }
+  a { color:var(--green); }
+  #log { white-space:pre-wrap; font-size:13px; color:var(--muted); margin-top:10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span>Konoha</span> Agent ID Daily Claim</h1>
+    <p>Hold a Binance Agent ID, claim <strong>100 KNO</strong> free every 24 hours. No deposit, no fees — just your Agent ID.</p>
+  </header>
+
+  <div class="card">
+    <h2>Wallet</h2>
+    <div id="walletBox">
+      <button id="connectBtn" class="secondary">Connect Wallet</button>
+      <span id="networkWarn" class="warn status-line" style="display:none">You are not on BNB Chain (56). <button id="switchBtn" class="secondary" style="padding:6px 12px;font-size:14px">Switch network</button></span>
+    </div>
+    <div id="accountBox" style="display:none;margin-top:12px">
+      <div>Connected: <span id="accountAddr" class="addr"></span></div>
+      <div class="status-line">Agent ID: <span id="agentIdStatus" class="muted">checking…</span></div>
+      <div class="status-line">Your KNO balance: <span id="knoBalance" class="muted">—</span></div>
+      <div class="status-line">Next claim: <span id="nextClaim" class="muted">—</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Daily Claim</h2>
+    <div class="row">
+      <div class="stat"><div class="label">Reward per claim</div><div class="value">100 KNO</div><div class="sub">once every 24 hours</div></div>
+      <div class="stat"><div class="label">Reward pool left</div><div class="value" id="poolLeft">—</div><div class="sub">KNO in the claim contract</div></div>
+      <div class="stat"><div class="label">Total claims</div><div class="value" id="totalClaims">—</div><div class="sub"><span id="uniqueClaimers">—</span> unique Agent ID claimers</div></div>
+    </div>
+    <div style="margin-top:16px">
+      <button id="claimBtn" class="big" disabled>Connect your wallet to claim</button>
+      <div id="claimReason" class="status-line muted"></div>
+      <div id="log"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Leaderboard — Top Claimers</h2>
+    <div id="leaderboardStatus" class="muted">Loading claim events…</div>
+    <table id="leaderboardTable" style="display:none">
+      <thead><tr><th>#</th><th>Address</th><th class="num">Claims</th><th class="num">Total KNO</th></tr></thead>
+      <tbody id="leaderboardBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Contracts (BNB Chain)</h2>
+    <div class="status-line">Konoha Token (KNO): <span id="tokenAddr" class="addr"></span></div>
+    <div class="status-line">Daily Claim: <span id="claimAddr" class="addr"></span></div>
+    <div class="status-line">Agent ID: <span id="agentIdAddr" class="addr"></span></div>
+    <div class="status-line muted" style="margin-top:8px">Verify on <a id="bscscanLink" href="https://bscscan.com" target="_blank" rel="noopener">BscScan</a>. Source code is open-source on GitHub.</div>
+  </div>
+
+  <footer>
+    Built by <strong>Garapan Konoha</strong> for the Binance Agent ID Hackathon.<br>
+    Agent ID is the identity gate: only addresses holding an Agent ID can claim.
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<script>
+/* ================= CONFIG — fill in after deployment ================= */
+const CONFIG = {
+  CLAIM_CONTRACT_ADDRESS: "0x1F9a91fc0965Cb03aBD65035665329681141dcEd",
+  TOKEN_ADDRESS:          "0xf48BAA77d67d3d5De6E60aF354DDd0d5deEaD47b",
+  AGENT_ID_ADDRESS:       "0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F",   // Agent ID (BNB mainnet)
+  CHAIN_ID: 56,                                                        // BNB Chain mainnet
+  RPC_URL: "https://bsc-dataseed.binance.org/",
+  START_BLOCK: 134331914,      // claim contract deployment block
+  CLAIM_AMOUNT_DISPLAY: "100"
+};
+/* ===================================================================== */
+
+const CLAIM_ABI = [
+  "function claim() external",
+  "function canClaim(address account) external view returns (bool ok, string reason)",
+  "function nextClaimAt(address account) external view returns (uint256)",
+  "function totalClaims() external view returns (uint256)",
+  "function uniqueClaimers() external view returns (uint256)",
+  "function claimAmount() external view returns (uint256)",
+  "function isAgentIdHolder(address account) external view returns (bool)",
+  "event Claimed(address indexed claimer, uint256 amount, uint256 timestamp)"
+];
+const TOKEN_ABI = [
+  "function balanceOf(address account) external view returns (uint256)",
+  "function decimals() external view returns (uint8)",
+  "function symbol() external view returns (string)"
+];
+const AGENT_ID_ABI = [
+  "function balanceOf(address owner) external view returns (uint256)"
+];
+
+const $ = (id) => document.getElementById(id);
+const shortAddr = (a) => a.slice(0, 6) + "…" + a.slice(-4);
+const fmtKno = (v) => Number(ethers.formatUnits(v, 18)).toLocaleString("en-US", { maximumFractionDigits: 0 });
+const fmtCountdown = (secs) => {
+  if (secs <= 0) return "ready now";
+  const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), s = secs % 60;
+  return h > 0 ? `${h}h ${m}m` : (m > 0 ? `${m}m ${s}s` : `${s}s`);
+};
+
+let readProvider, claimContract, tokenContract, agentIdContract;
+let signer = null, account = null;
+
+function log(msg) { $("log").textContent = msg; }
+
+async function initRead() {
+  readProvider = new ethers.JsonRpcProvider(CONFIG.RPC_URL);
+  claimContract = new ethers.Contract(CONFIG.CLAIM_CONTRACT_ADDRESS, CLAIM_ABI, readProvider);
+  tokenContract = new ethers.Contract(CONFIG.TOKEN_ADDRESS, TOKEN_ABI, readProvider);
+  agentIdContract = new ethers.Contract(CONFIG.AGENT_ID_ADDRESS, AGENT_ID_ABI, readProvider);
+  $("tokenAddr").textContent = CONFIG.TOKEN_ADDRESS;
+  $("claimAddr").textContent = CONFIG.CLAIM_CONTRACT_ADDRESS;
+  $("agentIdAddr").textContent = CONFIG.AGENT_ID_ADDRESS;
+  $("bscscanLink").href = "https://bscscan.com/address/" + CONFIG.CLAIM_CONTRACT_ADDRESS;
+  await refreshStats();
+  await loadLeaderboard();
+}
+
+async function refreshStats() {
+  try {
+    const [total, unique, pool] = await Promise.all([
+      claimContract.totalClaims(),
+      claimContract.uniqueClaimers(),
+      tokenContract.balanceOf(CONFIG.CLAIM_CONTRACT_ADDRESS)
+    ]);
+    $("totalClaims").textContent = total.toString();
+    $("uniqueClaimers").textContent = unique.toString();
+    $("poolLeft").textContent = fmtKno(pool);
+  } catch (e) { console.warn("stats failed", e); }
+}
+
+async function refreshAccount() {
+  if (!account) return;
+  try {
+    const [holds, kno, next] = await Promise.all([
+      agentIdContract.balanceOf(account).then((b) => b > 0n),
+      tokenContract.balanceOf(account),
+      claimContract.nextClaimAt(account)
+    ]);
+    $("agentIdStatus").innerHTML = holds
+      ? '<span class="ok">Yes — this address holds an Agent ID</span>'
+      : '<span class="bad">No — this address does not hold an Agent ID</span>';
+    $("knoBalance").textContent = fmtKno(kno) + " KNO";
+    const now = Math.floor(Date.now() / 1000);
+    $("nextClaim").textContent = next === 0n ? "ready now (never claimed)" : (Number(next) <= now ? "ready now" : "in " + fmtCountdown(Number(next) - now));
+    const [ok, reason] = await claimContract.canClaim(account);
+    const btn = $("claimBtn");
+    if (ok) {
+      btn.disabled = false;
+      btn.textContent = "Claim 100 KNO";
+      $("claimReason").textContent = "";
+    } else {
+      btn.disabled = true;
+      btn.textContent = "Claim 100 KNO";
+      $("claimReason").textContent = reason;
+    }
+  } catch (e) { console.warn("account refresh failed", e); }
+}
+
+async function loadLeaderboard() {
+  const status = $("leaderboardStatus");
+  if (!CONFIG.START_BLOCK || CONFIG.START_BLOCK === 0) {
+    status.textContent = "Leaderboard activates once the contract is deployed and START_BLOCK is set in the page config.";
+    return;
+  }
+  try {
+    const latest = await readProvider.getBlockNumber();
+    const filter = claimContract.filters.Claimed();
+    const totals = new Map();
+    const CHUNK = 2000;
+    for (let from = CONFIG.START_BLOCK; from <= latest; from += CHUNK) {
+      const to = Math.min(from + CHUNK - 1, latest);
+      const events = await claimContract.queryFilter(filter, from, to);
+      for (const ev of events) {
+        const a = ev.args.claimer;
+        const cur = totals.get(a) || { count: 0, total: 0n };
+        cur.count += 1; cur.total += ev.args.amount;
+        totals.set(a, cur);
+      }
+      status.textContent = `Loading claim events… (scanned to block ${to.toLocaleString()})`;
+    }
+    const rows = [...totals.entries()].sort((a, b) => (b[1].total > a[1].total ? 1 : -1)).slice(0, 10);
+    if (rows.length === 0) { status.textContent = "No claims yet — be the first Agent ID holder to claim!"; return; }
+    $("leaderboardBody").innerHTML = rows.map(([addr, v], i) =>
+      `<tr><td>${i + 1}</td><td class="mono">${shortAddr(addr)}</td><td class="num">${v.count}</td><td class="num">${fmtKno(v.total)}</td></tr>`).join("");
+    status.style.display = "none";
+    $("leaderboardTable").style.display = "";
+  } catch (e) {
+    console.warn("leaderboard failed", e);
+    status.textContent = "Could not load claim events from the public RPC. Try refreshing.";
+  }
+}
+
+async function connect() {
+  if (!window.ethereum) { alert("No wallet found. Install MetaMask or Binance Wallet, then refresh."); return; }
+  try {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const accounts = await provider.send("eth_requestAccounts", []);
+    account = accounts[0];
+    signer = await provider.getSigner();
+    const net = await provider.getNetwork();
+    $("networkWarn").style.display = Number(net.chainId) === CONFIG.CHAIN_ID ? "none" : "";
+    $("connectBtn").style.display = "none";
+    $("accountBox").style.display = "";
+    $("accountAddr").textContent = account;
+    await refreshAccount();
+    window.ethereum.on("accountsChanged", (accs) => { account = accs[0] || null; if (account) refreshAccount(); });
+    window.ethereum.on("chainChanged", () => location.reload());
+  } catch (e) { log("Connection failed: " + (e?.message || e)); }
+}
+
+async function switchNetwork() {
+  try {
+    await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x38" }] });
+  } catch (e) {
+    if (e.code === 4902) {
+      await window.ethereum.request({ method: "wallet_addEthereumChain", params: [{
+        chainId: "0x38", chainName: "BNB Chain",
+        nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
+        rpcUrls: ["https://bsc-dataseed.binance.org/"],
+        blockExplorerUrls: ["https://bscscan.com"]
+      }]});
+    } else { log("Network switch failed: " + (e?.message || e)); }
+  }
+}
+
+async function doClaim() {
+  if (!signer || !account) return;
+  const btn = $("claimBtn");
+  btn.disabled = true; btn.textContent = "Claiming…";
+  try {
+    const c = new ethers.Contract(CONFIG.CLAIM_CONTRACT_ADDRESS, CLAIM_ABI, signer);
+    const tx = await c.claim();
+    log("Claim submitted: " + tx.hash + " — waiting for confirmation…");
+    await tx.wait();
+    log("Claim confirmed! 100 KNO sent to your wallet.");
+    await refreshStats(); await refreshAccount(); await loadLeaderboard();
+  } catch (e) {
+    log("Claim failed: " + (e?.reason || e?.message || e));
+    await refreshAccount();
+  }
+  btn.disabled = false; btn.textContent = "Claim 100 KNO";
+}
+
+$("connectBtn").addEventListener("click", connect);
+$("switchBtn").addEventListener("click", switchNetwork);
+$("claimBtn").addEventListener("click", doClaim);
+setInterval(() => { refreshStats(); if (account) refreshAccount(); }, 30000);
+initRead();
+</script>
+</body>
+</html>
