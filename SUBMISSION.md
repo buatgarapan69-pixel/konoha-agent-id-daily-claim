@@ -37,7 +37,7 @@ is the identity check that gates the entire product: no Agent ID, no reward.
 
 - Agent ID contract: `0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F`
 - Chain: BNB Chain mainnet (56)
-- Source code: this repo (MIT). Both contracts verified on Sourcify (exact_match, incl. creation match). BscScan verification pending (needs BscScan API key — not available yet).
+- Source code: this repo (MIT). Both contracts verified on Sourcify (exact_match, incl. creation match) and **verified on BscScan** (confirmed via the Etherscan V2 API 18 Nov 22:48 WIB — Sourcify verification is imported automatically by BscScan; compiler v0.8.24+commit.e11b9ed9, optimizer runs 200, EVM cancun).
 - Deployment txs: token `0xca83cf4bc8029b3388bbc28fe121ecac63fa2bc12caf3443dce0c7319bfc09e2` (block 134331772, gas 555,412); claim `0xb71c69a90b53f99b8e6f3fa7127abf11d4925f7f61dfcbd978aac71b4e7e2739` (block 134331914, gas 571,580).
 - Deployer: Agentic Wallet `0xeD16208263f0Bba61aD01163d636B490C292881A` (Agent ID `hatake.ai`), via the deterministic deployment proxy (CREATE2).
 - KNO: 1,000,000 minted to the deployer; name `Konoha`, symbol `KNO`, 18 decimals.
@@ -52,11 +52,10 @@ Frontend (`frontend/index.html`) is configured with the deployed contract addres
 ## Checklist before submitting
 
 - [x] Both contracts deployed on BNB mainnet
-- [x] Both contracts verified on Sourcify (exact_match) — BscScan verification still pending (needs API key)
-- [ ] Reward pool funded with 900,000 KNO — **BLOCKED: transfer is pending in-app confirmation in the Binance app** (order 26111800002064345143; the Agentic Wallet flags the transfer to the new claim contract as medium-risk and requires the user to confirm it in the app). The deployer holds the full 1,000,000 KNO; once confirmed, the claim contract holds 900,000 KNO and the deployer keeps 100,000 KNO.
+- [x] Both contracts verified on Sourcify (exact_match) and on BscScan (confirmed via API 18 Nov 22:48 WIB)
+- [x] Reward pool funded — 900,000 KNO sent to the claim contract 18 Nov 22:21 WIB (order 26111800002064436133, confirmed by the user in the Binance app; pool 896,600 KNO after the smoke-test claim, Agentic holds 100,100 KNO)
 - [x] Frontend configured (contract addresses + START_BLOCK 134331914)
 - [ ] Frontend hosted (public URL) — pending serv00 approval or GitHub Pages (repo must be created via the GitHub website)
-- [ ] Smoke test: claim once from the Agentic Wallet (hatake.ai), confirm the
-      `Claimed` event and the leaderboard update on the live site — **blocked until the pool is funded**
+- [x] Smoke test: claim once from the Agentic Wallet (hatake.ai) — DONE 18 Nov 22:24 WIB, tx `0xe0500d61cfb1f9ced5af4503f4716fb77f3e400fc6af06ad0816cfb3e7c30f69`, `Claimed` event emitted, Agentic +100 KNO, totalClaims 34, uniqueClaimers 34, cooldown active
 - [ ] GitHub repo public, README complete — repo creation blocked via the GitHub App (403); create via the GitHub website, then push
 - [ ] Submission form filled with the materials above
